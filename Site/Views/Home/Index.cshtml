@@ -1,0 +1,163 @@
+﻿@{
+    ViewBag.Title = "ניהול לקוח - מערכת ליבה";
+}
+
+<div class="container-fluid mt-4" style="direction: rtl; text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+        <div>
+            <h1 class="h3 fw-bold text-primary mb-1">תיק לקוח עסקי וניהול תביעות</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0" style="padding: 0; display: flex; list-style: none; gap: 10px;">
+                    <li class="breadcrumb-item"><a href="#" class="text-decoration-none">ראשי</a> / </li>
+                    <li class="breadcrumb-item"><a href="#" class="text-decoration-none">פיננסי</a> / </li>
+                    <li class="breadcrumb-item active" aria-current="page">פרטי לקוח</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <span class="badge bg-danger p-2 fs-6">סיווג: שמור</span>
+            <span class="badge bg-secondary p-2 fs-6" id="sys-last-update">עדכון אחרון: היום, 08:30</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-dark text-white fw-bold">
+                    <i class="bi bi-person-badge"></i> פרופיל ישות
+                </div>
+                <div class="card-body bg-light">
+                    <div class="mb-3">
+                        <label class="text-muted small d-block">שם חברה / לקוח</label>
+                        <span class="fs-5 fw-bold text-dark" id="customer-name">גלובל קונטרול מערכות בע"מ</span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small d-block">מספר מזהה (ח.פ / ת.ז)</label>
+                        <span class="fs-6 fw-monospace text-secondary" id="customer-id">514987654</span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small d-block">סטטוס בקרת סיכונים</label>
+                        <span class="badge bg-warning text-dark" id="account-status">בבדיקה תקופתית</span>
+                    </div>
+                    <hr />
+                    <div class="row">
+                        <div class="col-6 mb-2">
+                            <label class="text-muted small d-block">יתרת תקציב</label>
+                            <span class="fw-bold text-success" id="account-balance">₪ 2,450,900</span>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <label class="text-muted small d-block">ניצול מסגרת</label>
+                            <span class="fw-bold text-danger">74%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-secondary text-white fw-bold">
+                    מנהל תיק ותקשרת
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>איש קשר ארגוני:</strong> <span id="contact-person">דניאל רדקליף</span></p>
+                    <p class="mb-2"><strong>טלפון מאובטח:</strong> 03-954-XXXX</p>
+                    <p class="mb-0"><strong>רמת הרשאת מערכת:</strong> <span class="text-danger fw-bold">Level 3</span></p>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 mt-4">
+                <div class="card-header bg-secondary text-white fw-bold">
+                    שדות סיכום והמלצות
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="brief" class="form-label fw-bold">תקציר רשיונות קודמים</label>
+                        <textarea class="form-control" id="brief" rows="3" placeholder="הזן תקציר רשיונות קודמים..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="recommendationsSummry" class="form-label fw-bold">חוות דעת נוספות</label>
+                        <textarea class="form-control" id="recommendationSummary" rows="3" placeholder="הזן חוות דעת נוספות..."></textarea>
+                    </div>
+
+                    <div class="mb-0">
+                        <label for="recommendationConditions" class="form-label fw-bold">תנאים עד שמור</label>
+                        <textarea class="form-control" id="recommendationConditions" rows="3" placeholder="הזן תנאים עד שמור..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-lg-8">
+
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">אירועים ותביעות פתוחות בטיפול</span>
+                    <button class="btn btn-sm btn-light fw-bold" id="btn-new-ticket">+ פתיחת אירוע חדש</button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0 align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th scope="col" style="text-align: right;">מזהה בקשה</th>
+                                    <th scope="col" style="text-align: right;">סוג הפעילות</th>
+                                    <th scope="col" style="text-align: right;">תאריך פתיחה</th>
+                                    <th scope="col" style="text-align: right;">סטטוס נוכחי</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="ticket-row" data-id="T-9982">
+                                    <td class="fw-bold text-primary">T-9982</td>
+                                    <td>אישור חריגת אשראי רבעונית</td>
+                                    <td>01/06/2026</td>
+                                    <td><span class="badge bg-warning text-dark ticket-status">ממתין לאישור חתם</span></td>
+                                </tr>
+                                <tr class="ticket-row" data-id="T-9841">
+                                    <td class="fw-bold text-primary">T-9841</td>
+                                    <td>עדכון ערבויות בנקאיות (נספח ג')</td>
+                                    <td>28/05/2026</td>
+                                    <td><span class="badge bg-danger ticket-status">נדחה - חסר חתימה</span></td>
+                                </tr>
+                                <tr class="ticket-row" data-id="T-9512">
+                                    <td class="fw-bold text-primary">T-9512</td>
+                                    <td>בדיקת נאותות משפטית - פרויקט אופק</td>
+                                    <td>15/05/2026</td>
+                                    <td><span class="badge bg-success ticket-status">הושלם בהצלחה</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-dark text-white fw-bold">
+                    הערות מנהל תיק וממצאים מיוחדים
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <textarea class="form-control" id="manager-notes" rows="4" placeholder="הוסף הערות פנימיות לגבי הלקוח העסקי שיועברו למנוע ה-AI...">בבדיקה האחרונה מול רשם החברות לא נמצאו שיעבודים חדשים. נדרש לוודא מול דניאל את נושא מסמכי המקור של הערבות הבנקאית לפני ישיבת הועדה הקרובה.</textarea>
+                    </div>
+                    <div class="text-start">
+                        <button class="btn btn-success" id="btn-save-notes">שמירת הערות מערכת</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<link href="/ChatBot/chatbot.css" rel="stylesheet" />
+
+@section Scripts {
+    <script src="/ChatBot/chatbot.js"></script>
+    <script src="/ChatBot/questions.js"></script>
+    <script src="/ChatBot/context.js"></script>
+    <script src="/ChatBot/api.js"></script>
+    <script src="~/ChatBot/init.js"></script>
+    
+}

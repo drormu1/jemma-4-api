@@ -1,0 +1,5 @@
+{
+  "search.exclude": {
+    "**/.vs/CopilotSnapshots/**": true
+  }
+}
