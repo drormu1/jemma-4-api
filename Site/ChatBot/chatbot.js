@@ -16,6 +16,7 @@
 var EnterpriseChatBot = {
     config: null,
     lastPasteSnapshot: null,
+    pendingClearAction: null,
     jq: window.jQuery,
 
     // פונקציית האתחול שמקבלת את הקונפיגורציה הספציפית מהמסך
@@ -54,14 +55,32 @@ var EnterpriseChatBot = {
 
     clearChatHistory: function () {
         var shouldConfirm = this.config.confirmClearChat !== false;
-        if (shouldConfirm && !window.confirm("למחוק את כל היסטוריית השיחה?")) {
+        if (shouldConfirm) {
+            var self = this;
+            this.openClearConfirm(function () {
+                self.clearChatHistoryNow();
+            });
             return;
         }
 
+        this.clearChatHistoryNow();
+    },
+
+    clearChatHistoryNow: function () {
         var chatBody = this.jq('#chat-discussion');
         chatBody.empty();
         chatBody.append(this.jq('<div class="chat-message bot"></div>').text(this.getWelcomeMessage()));
         this.lastPasteSnapshot = null;
+    },
+
+    openClearConfirm: function (onConfirm) {
+        this.pendingClearAction = typeof onConfirm === "function" ? onConfirm : null;
+        this.jq('#chat-clear-confirm-overlay').addClass('open').attr('aria-hidden', 'false');
+    },
+
+    closeClearConfirm: function () {
+        this.pendingClearAction = null;
+        this.jq('#chat-clear-confirm-overlay').removeClass('open').attr('aria-hidden', 'true');
     },
 
     rememberPasteSnapshot: function (targetId, previousValue) {
@@ -122,6 +141,48 @@ var EnterpriseChatBot = {
             jq('#chat-send-btn').on('click', function () { self.sendFreeMessage(); });
             jq('#chat-user-input').on('keypress', function (e) { if (e.which == 13) self.sendFreeMessage(); });
         }
+
+        jq('#chat-editor-close-x, #chat-editor-close-btn').on('click', function () {
+            self.closeAnswerEditor();
+        });
+
+        jq('#chat-editor-copy-btn').on('click', function () {
+            var button = this;
+            var textToCopy = jq('#chat-editor-textarea').val() || "";
+            self.copyText(textToCopy, function (ok) {
+                self.markActionButton(jq(button), ok ? "הועתק" : "שגיאה", "שגיאה", ok);
+            });
+        });
+
+        jq('#chat-editor-copy-close-btn').on('click', function () {
+            var button = this;
+            var textToCopy = jq('#chat-editor-textarea').val() || "";
+            self.copyText(textToCopy, function (ok) {
+                self.markActionButton(jq(button), ok ? "הועתק" : "שגיאה", "שגיאה", ok);
+                if (ok) {
+                    self.closeAnswerEditor();
+                }
+            });
+        });
+
+        jq('#chat-editor-modal').on('keydown', function (e) {
+            if (e.which === 27) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        jq('#chat-clear-confirm-cancel').on('click', function () {
+            self.closeClearConfirm();
+        });
+
+        jq('#chat-clear-confirm-ok').on('click', function () {
+            var clearAction = self.pendingClearAction;
+            self.closeClearConfirm();
+            if (typeof clearAction === "function") {
+                clearAction();
+            }
+        });
     },
 
     sendFreeMessage: function () {
@@ -162,6 +223,27 @@ var EnterpriseChatBot = {
         setTimeout(function () {
             button.text(originalText);
         }, 1300);
+    },
+
+    openAnswerEditor: function (answerText) {
+        var modal = this.jq('#chat-editor-modal');
+        var editor = this.jq('#chat-editor-textarea');
+        if (!modal.length || !editor.length) {
+            return;
+        }
+
+        editor.val(answerText || "");
+        modal.addClass('open').attr('aria-hidden', 'false');
+        editor.trigger('focus');
+    },
+
+    closeAnswerEditor: function () {
+        var modal = this.jq('#chat-editor-modal');
+        if (!modal.length) {
+            return;
+        }
+
+        modal.removeClass('open').attr('aria-hidden', 'true');
     },
 
     appendAnswerActions: function (messageElement, answerText, questionId) {
@@ -228,6 +310,17 @@ var EnterpriseChatBot = {
         rightActions.append(copyToOpinionBtn, copyToRecommendationBtn, copyToBriefBtn);
         actions.append(leftActions, rightActions);
         messageElement.after(actions);
+
+        messageElement.addClass('chat-message-bot-editable');
+        var inlineEditBtn = jq('<button type="button" class="chat-inline-edit-btn" title="עריכה במסך גדול" aria-label="עריכה במסך גדול">✎</button>');
+        inlineEditBtn.on('click', function () {
+            var button = this;
+            self.openAnswerEditor(answerText);
+            if (button && button.blur) {
+                button.blur();
+            }
+        });
+        messageElement.append(inlineEditBtn);
     },
 
     processMessage: function (text, questionId) {
@@ -242,7 +335,14 @@ var EnterpriseChatBot = {
         }
 
         // 2. הצגת אנימציית טעינה
-        chatBody.append('<div class="chat-message bot" id="chat-loading">🤖 מעבד נתונים...</div>');
+        chatBody.append(
+            '<div class="chat-message bot chat-loading-message" id="chat-loading">' +
+            '<span class="chat-loading-label">מעבד נתונים</span>' +
+            '<span class="chat-loading-dots" aria-hidden="true">' +
+            '<span></span><span></span><span></span>' +
+            '</span>' +
+            '</div>'
+        );
         chatBody.scrollTop(chatBody[0].scrollHeight);
 
         var self = this;

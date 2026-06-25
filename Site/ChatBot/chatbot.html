@@ -1,12 +1,15 @@
 ﻿<div id="chat-widget-container">
     <button id="chat-launcher-btn">
         <svg class="chat-icon-btn" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-10 10 10.1 10.1 0 0 0 1.29 4.9L2 22l5.24-1.29A10 10 0 0 0 22 12a10 10 0 0 0-10-10zm-1.85 14a.7.7 0 0 1-.5.2.73.73 0 0 1-.5-.2L5 11.85a.73.73 0 0 1 0-1L6.15 9.7a.73.73 0 0 1 1 0L10 12.6l4.85-4.85a.73.73 0 0 1 1 0l1.1 1.1a.73.73 0 0 1 0 1z"></path></svg>
-        שאל את ה-AI על הלקוח
+        העוזר החכם של נבו
     </button>
 
     <div id="chat-window">
         <div class="chat-header">
-            <span class="chat-header-title">סוכן חכם - נבו</span>
+            <div class="chat-header-title-wrap">
+                <span class="chat-header-ai-icon" aria-hidden="true">✦</span>
+                <span class="chat-header-title">העוזר החכם של נבו</span>
+            </div>
             <button type="button" id="chat-close-btn" aria-label="סגור">✕</button>
         </div>
 
@@ -24,6 +27,35 @@
                 <button type="button" id="chat-send-btn">
                     <svg class="send-icon" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
                 </button>
+            </div>
+        </div>
+
+        <div id="chat-clear-confirm-overlay" class="chat-clear-confirm-overlay" aria-hidden="true">
+            <div class="chat-clear-confirm-box" role="dialog" aria-modal="true" aria-labelledby="chat-clear-confirm-title">
+                <div id="chat-clear-confirm-title" class="chat-clear-confirm-title">למחוק את כל היסטוריית השיחה?</div>
+                <div class="chat-clear-confirm-actions">
+                    <button type="button" id="chat-clear-confirm-ok" class="chat-clear-confirm-ok">מחק</button>
+                    <button type="button" id="chat-clear-confirm-cancel" class="chat-clear-confirm-cancel">ביטול</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="chat-editor-modal" class="chat-editor-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="chat-editor-title" tabindex="-1">
+        <div class="chat-editor-dialog" role="document">
+            <div class="chat-editor-header">
+                <h2 id="chat-editor-title">עריכת תשובת AI</h2>
+                <button type="button" id="chat-editor-close-x" class="chat-editor-close-x" aria-label="סגור">✕</button>
+            </div>
+            <div class="chat-editor-body">
+                <textarea id="chat-editor-textarea" class="chat-editor-textarea" placeholder="כאן ניתן לערוך את הטקסט..."></textarea>
+            </div>
+            <div class="chat-editor-footer">
+                <div class="chat-editor-actions-right">
+                    <button type="button" id="chat-editor-copy-btn" class="chat-editor-copy-btn">העתק</button>
+                    <button type="button" id="chat-editor-copy-close-btn" class="chat-editor-copy-close-btn">העתק וסגור</button>
+                </div>
+                <button type="button" id="chat-editor-close-btn" class="chat-editor-close-btn">סגור</button>
             </div>
         </div>
     </div>
