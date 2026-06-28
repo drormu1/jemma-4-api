@@ -73,7 +73,7 @@
 }
 
 .chat-header {
-    background: linear-gradient(90deg, #111827 0%, #1f2937 68%, #374151 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 60%, #1d4ed8 100%);
     color: white;
     padding: 10px 15px;
     display: flex;
@@ -436,7 +436,7 @@
 
 .chat-action-btn-clear-icon {
     color: #be123c;
-    border-color: ##f8fafc;
+    border-color: #f8fafc;
 }
 
 .chat-action-btn-clear-icon:hover {
@@ -674,10 +674,15 @@
 }
 
 .chat-inline-edit-btn {    
-    top: 8px;
+    position: absolute;
+    top: 50%;
     right: 8px;
+    transform: translateY(-50%);
     width: 22px;
     height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: none;
     border-radius: 0;
     background: transparent;
@@ -693,6 +698,18 @@
 .chat-inline-edit-btn:hover {
     color: #0f172a;
     background: transparent;
+}
+
+.chat-message-bot-editable .chat-inline-edit-btn {
+    position: absolute !important;
+    right: 8px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    z-index: 3;
+}
+
+.chat-message-content {
+    display: block;
 }
 
 .chat-clear-confirm-overlay {

@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Linq;
 
-namespace Site.ChatBot.Models
+namespace Site.Models
 {
     public class ChatRequest
     {

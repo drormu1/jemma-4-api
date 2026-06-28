@@ -121,9 +121,9 @@
     <Compile Include="App_Start\BundleConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
-    <Compile Include="ChatBot\Models\ChatQueryRequest.cs" />
     <Compile Include="ChatBot\Models\ChatRequest.cs" />
     <Compile Include="ChatBot\Models\ChatResponse.cs" />
+    <Compile Include="ChatBot\Models\ClientRequest.cs" />
     <Compile Include="ChatBot\Models\Question.cs" />
     <Compile Include="ChatBot\Models\Questions.cs" />
     <Compile Include="Controllers\ChatbotController.cs" />
@@ -134,11 +134,6 @@
     <Compile Include="Logic\ChatbotLogic.cs" />
     <Compile Include="Logic\CommonLoggingShim.cs" />
     <Compile Include="Logic\IChatbotLogic.cs" />
-    <Compile Include="Models\ClientRequest.cs" />
-    <Compile Include="Models\ChatRequest.cs" />
-    <Compile Include="Models\ChatResponse.cs" />
-    <Compile Include="Models\Question.cs" />
-    <Compile Include="Models\Questions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

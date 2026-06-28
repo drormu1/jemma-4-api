@@ -11,12 +11,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Mvc;
-using WebGrease;
 
 namespace Site.Controllers
 {
@@ -36,20 +34,18 @@ namespace Site.Controllers
             _chatbotLogic = chatbotLogic ?? new ChatbotLogic();
         }
 
-        private static readonly HttpClient HttpClient = new HttpClient();
         private const string PromptTemplateRelativePath = "~/ChatBot/Prompts";
         private const string QuestionsCatalogRelativePath = "~/ChatBot/questions.json";
         private const string AiLogFilePath = @"C:\Logs\ai.log";
         private Questions _questionsCatalog;
 
-        private string AiApiKey => ConfigurationManager.AppSettings["AiApiKey"];
         private string AiModel => ConfigurationManager.AppSettings["AiModel"];
         private string AiApiUrl => ConfigurationManager.AppSettings["AiApiUrl"];
 
 
         [HttpPost]
         [ValidateInput(false)]
-        public async Task<JsonResult> ChatQuery()
+        public async Task<ActionResult> ChatQuery()
         {
             try
             {
@@ -89,7 +85,14 @@ namespace Site.Controllers
                     });
                 }
 
-                string chatRequestPayload = BuildChatRequestPayload(userPrompt);
+                // Per-question stream switch from questions.json; defaults to false when omitted.
+                bool streamEnabled = questionConfig?.Stream ?? false;
+                string chatRequestPayload = BuildChatRequestPayload(userPrompt, questionConfig);
+                if (streamEnabled)
+                {
+                    return await StreamToClientAsync(chatRequestPayload);
+                }
+
                 ChatResponse chatResponse = await SendToAiAsync(chatRequestPayload);
                 return Json(chatResponse);
             }
@@ -127,23 +130,18 @@ namespace Site.Controllers
         }
 
 
-        private string BuildChatRequestPayload(string userPrompt)
+        private string BuildChatRequestPayload(string userPrompt, Question questionConfig)
         {
             string systemPrompt = GetSystemPrompt();
-
-            //var payload = new
-            //{
-            //    model = "google/gemma-4-31B-it",
-            //    messages = new[] { new { role = "system", content = systemPrompt }, new { role = "user", content = request.Text } },
-            //    stream = true
-            //};
+            // Build request stream mode strictly from question configuration.
+            bool streamEnabled = questionConfig?.Stream ?? false;
 
             var aiPayload = new
             {
                 model = AiModel,
                 n = 1,
                 temperature = AiTemperature,
-                stream = false,
+                stream = streamEnabled,
                 messages = new[] {
                                    new {
                                             role = "system",
@@ -157,43 +155,10 @@ namespace Site.Controllers
                                   }
             };
 
-            //jeen model
-            //messages = new[] {
-            //                       new {
-            //                                type = "message",
-            //                                role = "system",
-            //                                content = new[] {
-            //                                    new {
-            //                                        type = "text",
-            //                                        text = systemPrompt
-            //                                    }
-            //                                }
-            //                       },
-            //                       new {
-            //                                type = "message",
-            //                                role = "user",
-            //                                content =  new[] {
-            //                                    new {
-            //                                        type = "text",
-            //                                        text = userPrompt
-            //                                    }
-            //                                }
-            //                        }
-            //                       }
-
-            //};
-
             string jsonPayload = JsonConvert.SerializeObject(aiPayload, Formatting.None);
             WriteAiLog(userPrompt, jsonPayload);
 
             return jsonPayload;
-        }
-
-        private int GenerateLineId()
-        {
-            var bytes = Guid.NewGuid().ToByteArray();
-            var value = BitConverter.ToInt32(bytes, 0);
-            return Math.Abs(value == int.MinValue ? 0 : value);
         }
 
         private string GetUserPrompt(ClientRequest queryInput)
@@ -282,10 +247,10 @@ namespace Site.Controllers
 
             var stopWatch = Stopwatch.StartNew();
             var response = await SendWithRetryAsync(AiApiUrl, chatRequestPayload);
-            var responseString = await response.Content.ReadAsStringAsync();
             stopWatch.Stop();
             //TODO OPEN
             // Log.Trace($"time taken isn sec  = {stopWatch.Elapsed.TotalSeconds}");
+            var responseString = await response.Content.ReadAsStringAsync();
             WriteAiResponseLog(response.StatusCode, responseString);
 
             if (!response.IsSuccessStatusCode)
@@ -296,13 +261,53 @@ namespace Site.Controllers
             var aiResult = JObject.Parse(responseString);
             var botReply = ExtractReplyFromCurrentProvider(aiResult);
 
-
             if (string.IsNullOrWhiteSpace(botReply))
             {
                 return new ChatResponse { success = false, reply = "Received an empty response from AI provider." };
             }
 
             return new ChatResponse { success = true, reply = botReply };
+        }
+
+        private async Task<ActionResult> StreamToClientAsync(string chatRequestPayload)
+        {
+            var response = await SendWithRetryAsync(AiApiUrl, chatRequestPayload);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                WriteAiResponseLog(response.StatusCode, errorBody);
+                return Json(new ChatResponse { success = false, reply = $"AI provider API error (status: {(int)response.StatusCode})" });
+            }
+
+            Response.BufferOutput = false;
+            Response.ContentType = "text/event-stream";
+            Response.ContentEncoding = Encoding.UTF8;
+
+            var rawBuilder = new StringBuilder();
+            using (var stream = await response.Content.ReadAsStreamAsync())
+            using (var reader = new StreamReader(stream, Encoding.UTF8))
+            {
+                while (!reader.EndOfStream)
+                {
+                    var line = await reader.ReadLineAsync();
+                    if (line == null)
+                    {
+                        continue;
+                    }
+
+                    rawBuilder.AppendLine(line);
+                    if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    Response.Write(line + "\n\n");
+                    Response.Flush();
+                }
+            }
+
+            WriteAiResponseLog(response.StatusCode, rawBuilder.ToString());
+            return new EmptyResult();
         }
 
         private string ExtractReplyFromCurrentProvider(JObject aiResult)
@@ -337,9 +342,9 @@ namespace Site.Controllers
                         request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
                         response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
                     }
-                    catch (HttpRequestException ex)
+                    catch (HttpRequestException)
                     {
-                        // Log.Error(ex);
+                        // Log.Error(request exception);
                         if (attempt == totalAttempts)
                         {
                             throw;
@@ -433,9 +438,9 @@ namespace Site.Controllers
                 Directory.CreateDirectory(Path.GetDirectoryName(AiLogFilePath));
                 System.IO.File.AppendAllText(AiLogFilePath, logBuilder.ToString(), Encoding.UTF8);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                // Log.Error(e);
+                // Log.Error(write ai log exception);
                 // Logging should never break chat flow.
             }
         }
@@ -509,6 +514,5 @@ namespace Site.Controllers
             public int CompletionTokens { get; set; }
             public int TotalTokens { get; set; }
         }
-
     }
 }

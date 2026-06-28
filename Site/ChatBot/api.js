@@ -47,12 +47,68 @@ window.ChatApi = (function () {
         callback("API request failed (" + statusCode + "): " + (message || "request failed"), { showActions: false });
     }
 
+    function tryParseJson(text) {
+        try {
+            return text ? JSON.parse(text) : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
     function postWithXmlHttpRequest(chatApiUrl, payload, callback) {
      
         var xhr = new XMLHttpRequest();
         xhr.open("POST", chatApiUrl, true);
         xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");
         xhr.setRequestHeader("Accept", "application/json");
+        var lastProcessedLength = 0;
+        var streamBuffer = "";
+        var hasStreamChunks = false;
+        var streamReply = "";
+
+        xhr.onprogress = function () {
+            var responseText = xhr.responseText || "";
+            if (responseText.length <= lastProcessedLength) {
+                return;
+            }
+
+            var chunk = responseText.substring(lastProcessedLength);
+            lastProcessedLength = responseText.length;
+            streamBuffer += chunk;
+
+            var lines = streamBuffer.split(/\r?\n/);
+            streamBuffer = lines.pop() || "";
+
+            for (var i = 0; i < lines.length; i++) {
+                var line = (lines[i] || "").trim();
+                if (!line || line.indexOf("data:") !== 0) {
+                    continue;
+                }
+
+                var data = line.substring(5).trim();
+                if (!data || data === "[DONE]") {
+                    continue;
+                }
+
+                var parsedChunk = tryParseJson(data);
+                if (!parsedChunk) {
+                    continue;
+                }
+
+                var deltaText =
+                    (((parsedChunk.choices || [])[0] || {}).delta || {}).content ||
+                    parsedChunk.outputText ||
+                    "";
+
+                if (!deltaText) {
+                    continue;
+                }
+
+                hasStreamChunks = true;
+                streamReply += deltaText;
+                callback(streamReply, { isPartial: true, showActions: false });
+            }
+        };
 
         xhr.onreadystatechange = function () {
             if (xhr.readyState !== 4) {
@@ -60,14 +116,13 @@ window.ChatApi = (function () {
             }
 
             var responseText = xhr.responseText || "";
-            var parsed = null;
-            try {
-                parsed = responseText ? JSON.parse(responseText) : null;
-            } catch (e) {
-                parsed = null;
-            }
+            var parsed = tryParseJson(responseText);
 
             if (xhr.status >= 200 && xhr.status < 300) {
+                if (hasStreamChunks) {
+                    callback(streamReply, { isPartial: false, showActions: true });
+                    return;
+                }
                 onSuccess(parsed, callback);
                 return;
             }
@@ -80,35 +135,14 @@ window.ChatApi = (function () {
     }
 
     function ask(chatApiUrl, questionId, clientContextData, callback) {
-      
-        console.log('resolveSubjectId = ' +resolveSubjectId());
         var payload = {
             questionId: questionId,
             clientContextData: clientContextData,
             subjectId: resolveSubjectId()
         };
 
-        var jq = window.jQuery;
-        if (!jq || !jq.ajax) {
-            postWithXmlHttpRequest(chatApiUrl, payload, callback);
-            return;
-        }
-
-        jq.ajax({
-            url: chatApiUrl,
-            type: "POST",
-            contentType: "application/json; charset=utf-8",
-            dataType: "json",
-            data: JSON.stringify(payload),
-            success: function (result) {
-                onSuccess(result, callback);
-            },
-            error: function (xhr, status, errorThrown) {
-                var statusCode = xhr && xhr.status ? xhr.status : "unknown";
-                var message = errorThrown || status || "request failed";
-                onError(statusCode, message, callback);
-            }
-        });
+        // Always use XHR path so we can consume streaming chunks via onprogress.
+        postWithXmlHttpRequest(chatApiUrl, payload, callback);
     }
 
     return {

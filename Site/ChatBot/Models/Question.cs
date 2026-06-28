@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 
 namespace Site.ChatBot.Models
@@ -21,6 +22,9 @@ namespace Site.ChatBot.Models
 
         [JsonProperty("clientContextSelectors")]
         public List<string> ClientContextSelectors { get; set; }
+
+        [JsonProperty("stream")]
+        public bool? Stream { get; set; }
       
     }
 }

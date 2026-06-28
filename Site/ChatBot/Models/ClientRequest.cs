@@ -1,7 +1,8 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 
-namespace Site.Models
+namespace Site.ChatBot.Models
 {
     public class ClientRequest
     {

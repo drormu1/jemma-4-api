@@ -225,16 +225,96 @@ var EnterpriseChatBot = {
         }, 1300);
     },
 
-    openAnswerEditor: function (answerText) {
+    setEditorCopyButtonsVisible: function (isVisible) {
+        var display = isVisible ? "" : "none";
+        this.jq('#chat-editor-copy-btn').css('display', display);
+        this.jq('#chat-editor-copy-close-btn').css('display', display);
+    },
+
+    openAnswerEditor: function (answerText, options) {
         var modal = this.jq('#chat-editor-modal');
         var editor = this.jq('#chat-editor-textarea');
         if (!modal.length || !editor.length) {
             return;
         }
 
+        options = options || {};
+        this.setEditorCopyButtonsVisible(options.allowCopy !== false);
         editor.val(answerText || "");
         modal.addClass('open').attr('aria-hidden', 'false');
         editor.trigger('focus');
+    },
+
+    syncEditorTextIfOpen: function (answerText) {
+        var modal = this.jq('#chat-editor-modal');
+        if (!modal.length || !modal.hasClass('open')) {
+            return;
+        }
+
+        this.jq('#chat-editor-textarea').val(answerText || "");
+    },
+
+    ensureInlineEditButton: function (messageElement, getAnswerText, options) {
+        var self = this;
+        if (!messageElement || !messageElement.length) {
+            return;
+        }
+
+        var existingButton = messageElement.find('.chat-inline-edit-btn');
+        if (existingButton.length) {
+            existingButton.remove();
+        }
+
+        messageElement.addClass('chat-message-bot-editable');
+        var inlineEditBtn = this.jq('<button type="button" class="chat-inline-edit-btn" title="עריכה במסך גדול" aria-label="עריכה במסך גדול">✎</button>');
+        inlineEditBtn.on('click', function () {
+            var button = this;
+            var textForEditor = typeof getAnswerText === "function" ? getAnswerText() : "";
+            self.openAnswerEditor(textForEditor, options || {});
+            if (button && button.blur) {
+                button.blur();
+            }
+        });
+        messageElement.append(inlineEditBtn);
+    },
+
+    ensureMessageContentElement: function (messageElement) {
+        if (!messageElement || !messageElement.length) {
+            return null;
+        }
+
+        var contentElement = messageElement.children('.chat-message-content');
+        if (!contentElement.length) {
+            contentElement = this.jq('<span class="chat-message-content"></span>');
+            messageElement.prepend(contentElement);
+        }
+
+        return contentElement;
+    },
+
+    setBotMessageText: function (messageElement, text) {
+        var contentElement = this.ensureMessageContentElement(messageElement);
+        if (!contentElement) {
+            return;
+        }
+
+        contentElement.text(text || "");
+    },
+
+    getBotMessageText: function (messageElement) {
+        var contentElement = this.ensureMessageContentElement(messageElement);
+        if (!contentElement) {
+            return "";
+        }
+
+        return contentElement.text() || "";
+    },
+
+    scrollChatToBottom: function (chatBody) {
+        if (!chatBody || !chatBody.length || !chatBody[0]) {
+            return;
+        }
+        chatBody.scrollTop(chatBody[0].scrollHeight);
     },
 
     closeAnswerEditor: function () {
@@ -311,22 +391,17 @@ var EnterpriseChatBot = {
         actions.append(leftActions, rightActions);
         messageElement.after(actions);
 
-        messageElement.addClass('chat-message-bot-editable');
-        var inlineEditBtn = jq('<button type="button" class="chat-inline-edit-btn" title="עריכה במסך גדול" aria-label="עריכה במסך גדול">✎</button>');
-        inlineEditBtn.on('click', function () {
-            var button = this;
-            self.openAnswerEditor(answerText);
-            if (button && button.blur) {
-                button.blur();
-            }
-        });
-        messageElement.append(inlineEditBtn);
+        self.ensureInlineEditButton(
+            messageElement,
+            function () { return self.getBotMessageText(messageElement); },
+            { allowCopy: true }
+        );
     },
 
     processMessage: function (text, questionId) {
         var chatBody = this.jq('#chat-discussion');
-        chatBody.append('<div class="chat-message user">' + text + '</div>');
-        chatBody.scrollTop(chatBody[0].scrollHeight);
+        chatBody.append(this.jq('<div class="chat-message user"></div>').text(text || ""));
+        this.scrollChatToBottom(chatBody);
 
         // 1. קבלת קונטקסט מהקובץ העסקי (אם סופק)
         var currentContext = {};
@@ -343,17 +418,59 @@ var EnterpriseChatBot = {
             '</span>' +
             '</div>'
         );
-        chatBody.scrollTop(chatBody[0].scrollHeight);
+        this.scrollChatToBottom(chatBody);
 
         var self = this;
+        var streamingMessageElement = null;
+        var loadingRemoved = false;
+        var actionsAttached = false;
+        function ensureLoadingRemoved() {
+            if (loadingRemoved) {
+                return;
+            }
+            self.jq('#chat-loading').remove();
+            loadingRemoved = true;
+        }
 
         // 3. הפעלת ה-Handler הספציפי שקיבלנו מהמסך (הפרדה מוחלטת!)
         this.config.onResolveAnswer(questionId, currentContext, function (answer, uiOptions) {
-            self.jq('#chat-loading').remove();
-            var botMessageElement = self.jq('<div class="chat-message bot"></div>').text(answer);
-            chatBody.append(botMessageElement);
-            self.appendAnswerActions(botMessageElement, answer, questionId);
-            chatBody.scrollTop(chatBody[0].scrollHeight);
+            uiOptions = uiOptions || {};
+
+            if (uiOptions.isPartial === true) {
+                ensureLoadingRemoved();
+                if (!streamingMessageElement) {
+                    streamingMessageElement = self.jq('<div class="chat-message bot"></div>');
+                    chatBody.append(streamingMessageElement);
+                    self.ensureInlineEditButton(
+                        streamingMessageElement,
+                        function () { return self.getBotMessageText(streamingMessageElement); },
+                        { allowCopy: false }
+                    );
+                }
+                self.setBotMessageText(streamingMessageElement, answer || "");
+                self.syncEditorTextIfOpen(answer || "");
+                self.scrollChatToBottom(chatBody);
+                return;
+            }
+
+            ensureLoadingRemoved();
+
+            var botMessageElement = streamingMessageElement;
+            if (!botMessageElement) {
+                botMessageElement = self.jq('<div class="chat-message bot"></div>');
+                chatBody.append(botMessageElement);
+            }
+
+            self.setBotMessageText(botMessageElement, answer || "");
+            self.syncEditorTextIfOpen(answer || "");
+            self.setEditorCopyButtonsVisible(true);
+
+            if (!actionsAttached && uiOptions.showActions !== false) {
+                self.appendAnswerActions(botMessageElement, answer, questionId);
+                actionsAttached = true;
+            }
+
+            self.scrollChatToBottom(chatBody);
         });
     }
 };
