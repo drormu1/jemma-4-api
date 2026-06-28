@@ -2,7 +2,7 @@
   "questions": [
     {
       "id": "opionionsSummary",
-      "icon": "📋 ",
+      "icon": "🧾 ",
       "text": "צור תקציר חוות דעת לנושא זה",
       "serverContextFromLogic": true,
       "isOpenQuestion": false,
@@ -13,7 +13,7 @@
     
     {
       "id": "getPrevLicensesHistory",
-      "icon": "📝 ",
+      "icon": "📚 ",
       "text": "צור תקציר רשיונות קודמים",
       "serverContextFromLogic": true,
       "isOpenQuestion": false,
@@ -21,7 +21,7 @@
     },
     {
       "id": "createRecommantionTemplate",
-      "icon": "📊 ",
+      "icon": "🧩 ",
       "text": "צור תבנית להמלצה",
       "serverContextFromLogic": true,
       "isOpenQuestion": false,
