@@ -535,6 +535,7 @@
 .chat-editor-dialog {
     width: min(1104px, 96vw);
     min-height: 420px;
+    height: min(88vh, 920px);
     max-height: 88vh;
     background-color: #ffffff;
     border-radius: 12px;
@@ -543,6 +544,7 @@
     display: flex;
     flex-direction: column;
     direction: rtl;
+    overflow: hidden;
 }
 
 .chat-editor-header {
@@ -577,14 +579,17 @@
     flex: 1;
     padding: 14px 16px 10px;
     display: flex;
+    min-height: 0;
 }
 
 .chat-editor-textarea {
     width: 100%;
     max-width: none !important;
     height: 100%;
-    min-height: min(72vh, 672px);
+    min-height: 420px;
+    max-height: none;
     resize: vertical;
+    overflow-y: auto;
     border: 1px solid #cbd5e1;
     border-radius: 10px;
     padding: 12px;
