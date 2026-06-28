@@ -1,49 +1,48 @@
 {
   "questions": [
     {
-      "id": "validateTotRecommandation",
-      "icon": "🔎",
-      "text": "האם התוט התייחס לנושא זה",
-      "serverContextFromLogic": true,
-      "isOpenQuestion": false,
-      "questionExtended": "עליך לוודא כי נושא הוועדה שיועבר אליך, אכן תואם את המלצת הוועדה, וניתן להבין כי הוועדה דנה בנושא המדובר.\nעליך לבדוק במדויק האם ישנה סתירה או שחסרה התייחסות בהמלצה למוצר, ממדינה או בקשה מסוימת."
-    },
-    {
-      "id": "getHistory",
-      "icon": "📝",
-      "text": "תקציר רשיונות קודמים",
-      "serverContextFromLogic": true,
-      "isOpenQuestion": false,
-      "questionExtended": "לפניך היסטוריה של נושאים שדנו בעבר במכירת מוצר זה למדינות אחרות או אפילו לאותה המדינה ואם היו מגבלות.\nעליך לעזור למנהל הוועדה, ולתת תקציר של כל ההחלטות הקודמות שלפניך בפורמט הבא:\nב {createdAt}, {material}, {country} - {recommendation} - {recommendationConditions}\nבמידה ויש כמה המלצות כאלו תפרט אותן אחת אחרי השנייה."
-    },
-    {
       "id": "opionionsSummary",
-      "icon": "📋",
-      "text": "צור תקציר חוות דעת למפגש זה",
+      "icon": "📋 ",
+      "text": "צור תקציר חוות דעת לנושא זה",
       "serverContextFromLogic": true,
-      "isOpenQuestion": false,
+      "isOpenQuestion": false
       
-"questionExtended": "בהינתן הנתונים הבאים על מוצרים ומדינות , וחוות הדעת שניתנה עליהם טרום הוועדה, עליך ליצור תבנית טקסט די אחידה במבנה שמתואר כאן.\nהפלט יהיה במבנה שבו לכל פריט במערך הג'ייסון, עליך להציג בכותרת: מס' שורה: מס שורה, מוצר: מוצר, מדינה: מדינה, שם המומחה: המומחה, תפקיד: פקיד.\nכאשר לכל פריט במערך עליך לרדת שורה חדשה, ואז לכתוב: חו\"ד: לכתובכאן את חוות הדעת מהשדה OPINION , אם הטקסט יותר מ 30 מילים,  תכתוב רק את השלושים הראשונות ואז תרדום בסוגריים (קיים המשך במקור) ואז לרדת שתי שורות ולעבור לפריט הבא.\n"
-    },
 
+    },
+    
+    {
+      "id": "getPrevLicensesHistory",
+      "icon": "📝 ",
+      "text": "צור תקציר רשיונות קודמים",
+      "serverContextFromLogic": true,
+      "isOpenQuestion": false
+    },
     {
       "id": "createRecommantionTemplate",
-      "icon": "📊",
+      "icon": "📊 ",
       "text": "צור תבנית להמלצה",
       "serverContextFromLogic": true,
-      "isOpenQuestion": false,
-      "questionExtended": "בהינתן הנתונים הבאים על מוצרים ומדינות שנידונו בוועדה, עליך ליצור תבנית טקסט די אחידה במבנה שמתואר כאן.\nהפלט יהיה במבנה שבו לכל פריט במערך הג'ייסון, עליך להציג בכותרת: מס' שורה: מס שורה, מוצר: מוצר, מדינה: מדינה.\nכאשר לכל פריט במערך עליך לרדת שורה חדשה, ואז לכתוב: ההמלצה: ואז לרדת שתי שורות ולעבור לפריט הבא.\n"
+      "isOpenQuestion": false
     },
     {
-      "id": "grammar-check",
-      "icon": "✍️",
+      "id": "validateTotRecommandation",
+      "icon": "🔎 ",
+      "text": "האם הוועדה התייחסה לכול השורות בנושא זה",
+      "serverContextFromLogic": true,
+      "isOpenQuestion": false,
+      "clientContextSelectors": [
+        "#recommendationConditions"
+      ]   
+    },
+    {
+      "id": "grammarCheck",
+      "icon": "✍️ ",
       "text": "תקן ונסח טקטס תנאים מגבילים להמלצה",
       "serverContextFromLogic": false,
       "isOpenQuestion": false,
       "clientContextSelectors": [
         "#recommendationConditions"
-      ],
-      "questionExtended": "שפר את הניסוח של הטקסט שמתקבל בשדה . תקן שגיאות כתיב, שפר תחביר וניסוח, ושמור על טון מקצועי וברור."
+      ]      
     }
   ]
 }

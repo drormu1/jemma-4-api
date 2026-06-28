@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Linq;
 
-namespace Mod.CommissionsNG.Web45.Models
+namespace Site.Models
 {
     public class ChatRequest
     {

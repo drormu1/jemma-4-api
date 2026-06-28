@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using System.Collections.Generic;
 
-namespace Mod.CommissionsNG.Web45.ChatBot.Models
+namespace Site.ChatBot.Models
 {
     public class Question
     {
@@ -14,10 +14,13 @@ namespace Mod.CommissionsNG.Web45.ChatBot.Models
         [JsonProperty("serverContextFromLogic")]
         public bool ServerContextFromLogic { get; set; }
 
+
+        [JsonProperty("isOpenQuestion")]
+        public bool IsOpenQuestion { get; set; }
+
+
         [JsonProperty("clientContextSelectors")]
         public List<string> ClientContextSelectors { get; set; }
-
-        [JsonProperty("questionExtended")]
-        public string QuestionExtended { get; set; }
+      
     }
 }

@@ -14,9 +14,9 @@ namespace Site
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
 
             routes.MapRoute(
-                name: "ChatQueryHe",
-                url: "he/Chat/ChatQuery",
-                defaults: new { controller = "Chat", action = "ChatQuery" }
+                name: "ChatbotQueryHe",
+                url: "he/Chatbot/ChatQuery",
+                defaults: new { controller = "Chatbot", action = "ChatQuery" }
             );
 
             routes.MapRoute(

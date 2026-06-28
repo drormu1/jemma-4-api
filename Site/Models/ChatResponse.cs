@@ -1,4 +1,4 @@
-namespace Mod.CommissionsNG.Web45.Models
+namespace Site.Models
 {
     public class ChatResponse
     {

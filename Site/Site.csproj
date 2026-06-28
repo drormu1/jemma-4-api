@@ -126,11 +126,14 @@
     <Compile Include="ChatBot\Models\ChatResponse.cs" />
     <Compile Include="ChatBot\Models\Question.cs" />
     <Compile Include="ChatBot\Models\Questions.cs" />
-    <Compile Include="Controllers\ChatController.cs" />
+    <Compile Include="Controllers\ChatbotController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Logic\ChatbotLogic.cs" />
+    <Compile Include="Logic\CommonLoggingShim.cs" />
+    <Compile Include="Logic\IChatbotLogic.cs" />
     <Compile Include="Models\ClientRequest.cs" />
     <Compile Include="Models\ChatRequest.cs" />
     <Compile Include="Models\ChatResponse.cs" />
@@ -174,13 +177,19 @@
     <Content Include="ChatBot\questions.json" />
     <Content Include="Scripts\jquery-1.6.2.js" />
     <Content Include="Scripts\jquery-1.6.2.min.js" />
+    <Content Include="log4net.config" />
+    <Content Include="ChatBot\Prompts\createRecommantionTemplate.md" />
+    <Content Include="ChatBot\Prompts\getPrevLicensesHistory.md" />
+    <Content Include="ChatBot\Prompts\grammarCheck.md" />
+    <Content Include="ChatBot\Prompts\opionionsSummary.md" />
+    <Content Include="ChatBot\Prompts\system-prompt.md" />
+    <Content Include="ChatBot\Prompts\validateTotRecommandation.md" />
     <None Include="Scripts\jquery.validate-vsdoc.js" />
     <Content Include="Scripts\jquery.validate.js" />
     <Content Include="Scripts\jquery.validate.min.js" />
     <Content Include="Scripts\jquery.validate.unobtrusive.js" />
     <Content Include="Scripts\jquery.validate.unobtrusive.min.js" />
     <Content Include="Scripts\modernizr-2.8.3.js" />
-    <Content Include="App_Data\ai-prompt-template.md" />
     <Content Include="Web.config" />
     <Content Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
@@ -197,7 +206,7 @@
     <Content Include="Views\Home\Index.cshtml" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="ChatBot\Prompts\" />
+    <Folder Include="App_Data\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\bootstrap.rtl.min.css.map" />

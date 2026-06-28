@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using System.Collections.Generic;
 
-namespace Mod.CommissionsNG.Web45.Models
+namespace Site.Models
 {
     public class Question
     {

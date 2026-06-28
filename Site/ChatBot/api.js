@@ -32,7 +32,7 @@ window.ChatApi = (function () {
         }
 
         var parsed = parseInt(rawValue, 10);
-        return isNaN(parsed) ? 0 : parsed;
+        return isNaN(parsed) ?window.currentSubjectId : parsed;
     }
 
     function onSuccess(result, callback) {
@@ -80,7 +80,8 @@ window.ChatApi = (function () {
     }
 
     function ask(chatApiUrl, questionId, clientContextData, callback) {
-     debugger;
+      
+        console.log('resolveSubjectId = ' +resolveSubjectId());
         var payload = {
             questionId: questionId,
             clientContextData: clientContextData,
