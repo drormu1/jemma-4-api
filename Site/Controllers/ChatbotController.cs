@@ -49,13 +49,7 @@ namespace Site.Controllers
         {
             try
             {
-                string requestBody;
-                using (var reader = new StreamReader(Request.InputStream))
-                {
-                    Request.InputStream.Position = 0;
-                    requestBody = reader.ReadToEnd();
-                }
-                var questionInput = DeserializeClientRequest(requestBody);
+                ClientRequest questionInput = GetQuestionInput();
                 if (questionInput == null)
                 {
                     return Json(new ChatResponse { success = false, reply = "Invalid JSON payload." });
@@ -67,16 +61,11 @@ namespace Site.Controllers
                     return Json(new ChatResponse { success = false, reply = "Question id is required." });
                 }
 
-                questionInput.ClientContextData = questionInput.ClientContextData == null || questionInput.ClientContextData.Count == 0
-                    ? null
-                    : questionInput.ClientContextData;
-
                 var questionConfig = FindQuestionConfig(questionInput.QuestionId);
 
                 var userPrompt = GetUserPrompt(questionInput);
-                var isOpenQuestion = questionConfig?.IsOpenQuestion ?? false;
 
-                if (string.IsNullOrWhiteSpace(userPrompt) && !isOpenQuestion)
+                if (string.IsNullOrWhiteSpace(userPrompt))
                 {
                     return Json(new ChatResponse
                     {
@@ -100,6 +89,18 @@ namespace Site.Controllers
             {
                 return Json(new ChatResponse { success = false, reply = $"Internal server error: {ex.Message}" });
             }
+        }
+
+        private ClientRequest GetQuestionInput()
+        {
+            string requestBody;
+            using (var reader = new StreamReader(Request.InputStream))
+            {
+                Request.InputStream.Position = 0;
+                requestBody = reader.ReadToEnd();
+            }
+
+            return DeserializeClientRequest(requestBody);
         }
 
         private ClientRequest DeserializeClientRequest(string requestBody)
@@ -440,7 +441,7 @@ namespace Site.Controllers
             }
             catch (Exception)
             {
-                // Log.Error(write ai log exception);
+                // Log.Error(e);
                 // Logging should never break chat flow.
             }
         }

@@ -5,7 +5,6 @@
       "icon": "🧾 ",
       "text": "צור תקציר חוות דעת לנושא זה",
       "serverContextFromLogic": true,
-      "isOpenQuestion": false,
       "stream": true
       
 
@@ -16,7 +15,6 @@
       "icon": "📚 ",
       "text": "צור תקציר רשיונות קודמים",
       "serverContextFromLogic": true,
-      "isOpenQuestion": false,
       "stream": true
     },
     {
@@ -24,7 +22,6 @@
       "icon": "🧩 ",
       "text": "צור תבנית להמלצה",
       "serverContextFromLogic": true,
-      "isOpenQuestion": false,
       "stream": true
     },
     {
@@ -32,7 +29,6 @@
       "icon": "🔎 ",
       "text": "האם הוועדה התייחסה לכול השורות בנושא זה",
       "serverContextFromLogic": true,
-      "isOpenQuestion": false,
       "stream": true,
       "clientContextSelectors": [
         "#recommendationConditions"
@@ -43,7 +39,6 @@
       "icon": "✍️ ",
       "text": "תקן ונסח טקטס תנאים מגבילים להמלצה",
       "serverContextFromLogic": false,
-      "isOpenQuestion": false,
       "stream": true,
       "clientContextSelectors": [
         "#recommendationConditions"

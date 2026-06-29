@@ -15,11 +15,6 @@ namespace Site.ChatBot.Models
         [JsonProperty("serverContextFromLogic")]
         public bool ServerContextFromLogic { get; set; }
 
-
-        [JsonProperty("isOpenQuestion")]
-        public bool IsOpenQuestion { get; set; }
-
-
         [JsonProperty("clientContextSelectors")]
         public List<string> ClientContextSelectors { get; set; }
 
