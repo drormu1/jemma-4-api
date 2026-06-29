@@ -1,0 +1,1 @@
+ollama run gemma3:270m
