@@ -177,6 +177,7 @@
     <Content Include="ChatBot\Prompts\getPrevLicensesHistory.md" />
     <Content Include="ChatBot\Prompts\grammarCheck.md" />
     <Content Include="ChatBot\Prompts\opionionsSummary.md" />
+    <Content Include="ChatBot\Prompts\resendToAi.md" />
     <Content Include="ChatBot\Prompts\system-prompt.md" />
     <Content Include="ChatBot\Prompts\validateTotRecommandation.md" />
     <None Include="Scripts\jquery.validate-vsdoc.js" />

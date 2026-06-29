@@ -43,6 +43,16 @@
       "clientContextSelectors": [
         "#recommendationConditions"
       ]      
+    },
+    {
+      "id": "resendToAi",
+      "icon": "🔄 ",
+      "text": "שלח מחדש לסוכן החכם",
+      "serverContextFromLogic": false,
+      "stream": true,
+      "clientContextSelectors": [
+        "#resultsTextBox"
+      ]
     }
   ]
 }

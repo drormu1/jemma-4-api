@@ -10,7 +10,12 @@
     <div id="chat-window">
         <div class="chat-header">
             <div class="chat-header-title-wrap">
-                <span class="chat-header-ai-icon" aria-hidden="true">✦</span>
+                <span class="chat-header-ai-icon" aria-hidden="true">
+                    <svg class="chat-header-ai-icon-svg" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 3.2l1.8 4 4 1.8-4 1.8-1.8 4-1.8-4-4-1.8 4-1.8 1.8-4z" fill="currentColor"></path>
+                        <path d="M18.6 14.4l.7 1.5 1.5.7-1.5.7-.7 1.5-.7-1.5-1.5-.7 1.5-.7.7-1.5z" fill="currentColor"></path>
+                    </svg>
+                </span>
                 <span class="chat-header-title">העוזר החכם של נבו</span>
             </div>
             <button type="button" id="chat-close-btn" aria-label="סגור">✕</button>
@@ -21,6 +26,19 @@
 
         <div class="chat-body" id="chat-discussion">
             <div class="chat-message bot">שלום! לחץ על אחת השאלות המובנות למעלה או הקלד שאלה חופשית בתחתית כדי לקבל מידע חי מהמסך.</div>
+        </div>
+
+        <div class="chat-global-actions" id="chat-global-actions">
+            <div class="chat-actions-left">
+                <button type="button" id="chat-global-clear-btn" class="chat-action-btn chat-action-btn-clear chat-action-btn-icon chat-action-btn-clear-icon" title="מחיקה" aria-label="מחיקה">🗑</button>
+                <button type="button" id="chat-global-undo-btn" class="chat-action-btn chat-action-btn-undo chat-action-btn-icon" title="בטל העתקה" aria-label="בטל העתקה">↶</button>
+                <button type="button" id="chat-global-copy-btn" class="chat-action-btn chat-action-btn-copy-icon chat-action-btn-icon" title="העתק לזיכרון" aria-label="העתק לזיכרון">⧉</button>
+            </div>
+            <div class="chat-actions-right">
+                <button type="button" id="chat-global-copy-opinion-btn" class="chat-action-btn chat-action-btn-soft">העתק לחו"ד</button>
+                <button type="button" id="chat-global-copy-recommendation-btn" class="chat-action-btn chat-action-btn-soft">העתק להמלצה</button>
+                <button type="button" id="chat-global-copy-brief-btn" class="chat-action-btn chat-action-btn-soft">העתק לתקציר</button>
+            </div>
         </div>
 
         <div class="chat-footer">

@@ -17,6 +17,7 @@ var EnterpriseChatBot = {
     config: null,
     lastPasteSnapshot: null,
     pendingClearAction: null,
+    lastEditableResultMessage: null,
     jq: window.jQuery,
 
     // פונקציית האתחול שמקבלת את הקונפיגורציה הספציפית מהמסך
@@ -71,6 +72,9 @@ var EnterpriseChatBot = {
         chatBody.empty();
         chatBody.append(this.jq('<div class="chat-message bot"></div>').text(this.getWelcomeMessage()));
         this.lastPasteSnapshot = null;
+        this.lastEditableResultMessage = null;
+        this.updateGlobalActionsState();
+        this.updateResendQuestionAvailability();
     },
 
     openClearConfirm: function (onConfirm) {
@@ -111,16 +115,104 @@ var EnterpriseChatBot = {
         container.find('.quick-btn').remove(); // ניקוי כפתורים סטטיים אם יש
 
         var jq = this.jq;
+        var self = this;
         this.config.questions.forEach(function (q) {
             var btn = jq('<button class="quick-btn"></button>')
                 .attr('data-q', q.id)
                 .text(q.text);
 
             if (q.icon) {
-                btn.prepend(q.icon); // הזרקת אייקון מותאם במידה ויש
+                btn.prepend(
+                    jq('<span class="quick-btn-icon" aria-hidden="true"></span>').text(q.icon)
+                ); // הזרקת אייקון מותאם במידה ויש
+            }
+
+            if (q.id === "resendToAi") {
+                btn.prop('disabled', true).attr('aria-disabled', 'true');
             }
             container.append(btn);
         });
+
+        self.updateResendQuestionAvailability();
+    },
+
+    getResultsTextBox: function () {
+        return this.jq('#resultsTextBox').first();
+    },
+
+    getLatestResultEditor: function () {
+        if (!this.lastEditableResultMessage || !this.lastEditableResultMessage.length) {
+            return this.jq();
+        }
+
+        return this.lastEditableResultMessage.find('.chat-message-content-editor').first();
+    },
+
+    isLatestResultEditorReadyForResend: function () {
+        var latestEditor = this.getLatestResultEditor();
+        if (!latestEditor.length || !latestEditor.is(':visible')) {
+            return false;
+        }
+
+        if (latestEditor.prop('disabled') || latestEditor.prop('readonly')) {
+            return false;
+        }
+
+        return !!(latestEditor.val() || "").trim();
+    },
+
+    syncLatestResultEditorToResultsTextBox: function () {
+        var latestEditor = this.getLatestResultEditor();
+        var resultsTextBox = this.getResultsTextBox();
+        if (!latestEditor.length || !resultsTextBox.length) {
+            return;
+        }
+
+        if (latestEditor.is(resultsTextBox)) {
+            return;
+        }
+
+        resultsTextBox.val(latestEditor.val() || "").trigger('change').trigger('input');
+    },
+
+    isResultsTextBoxReadyForResend: function () {
+        var resultsTextBox = this.getResultsTextBox();
+        if (!resultsTextBox.length) {
+            return false;
+        }
+
+        if (!resultsTextBox.is(':visible')) {
+            return false;
+        }
+
+        if (resultsTextBox.prop('disabled') || resultsTextBox.prop('readonly')) {
+            return false;
+        }
+
+        return !!(resultsTextBox.val() || "").trim();
+    },
+
+    updateResendQuestionAvailability: function () {
+        var resendButton = this.jq('#chat-quick-questions .quick-btn[data-q="resendToAi"]');
+        if (!resendButton.length) {
+            return;
+        }
+
+        var isEnabled = this.isResultsTextBoxReadyForResend() || this.isLatestResultEditorReadyForResend();
+        resendButton.prop('disabled', !isEnabled).attr('aria-disabled', isEnabled ? 'false' : 'true');
+    },
+
+    setResultsTextBoxFromFirstAnswer: function (answerText, questionId) {
+        if (questionId === "resendToAi") {
+            return;
+        }
+
+        var resultsTextBox = this.getResultsTextBox();
+        if (!resultsTextBox.length) {
+            return;
+        }
+
+        resultsTextBox.val(answerText || "").trigger('change').trigger('input');
     },
 
     initEvents: function () {
@@ -183,6 +275,51 @@ var EnterpriseChatBot = {
                 clearAction();
             }
         });
+
+        jq('#chat-global-clear-btn').on('click', function () {
+            self.clearChatHistory();
+        });
+
+        jq('#chat-global-undo-btn').on('click', function () {
+            var button = jq(this);
+            var result = self.undoLastPaste();
+            self.markActionButton(button, result.ok ? "↺" : "!", "!", result.ok);
+            if (this && this.blur) {
+                this.blur();
+            }
+        });
+
+        jq('#chat-global-copy-btn').on('click', function () {
+            var button = jq(this);
+            self.copyText(self.getActiveResultText(), function (ok) {
+                self.markActionButton(button, ok ? "✓" : "!", "!", ok);
+            });
+        });
+
+        jq('#chat-global-copy-opinion-btn').on('click', function () {
+            self.pasteActiveResultToTarget("recommendationSummary", jq(this));
+        });
+
+        jq('#chat-global-copy-recommendation-btn').on('click', function () {
+            self.pasteActiveResultToTarget("recommendationConditions", jq(this));
+        });
+
+        jq('#chat-global-copy-brief-btn').on('click', function () {
+            self.pasteActiveResultToTarget("brief", jq(this));
+        });
+
+        jq(document).on('input change', '#resultsTextBox', function () {
+            self.updateGlobalActionsState();
+            self.updateResendQuestionAvailability();
+        });
+
+        jq('#chat-discussion').on('input change', '.chat-message-content-editor', function () {
+            self.syncLatestResultEditorToResultsTextBox();
+            self.updateGlobalActionsState();
+            self.updateResendQuestionAvailability();
+        });
+
+        self.updateGlobalActionsState();
     },
 
     sendFreeMessage: function () {
@@ -264,6 +401,10 @@ var EnterpriseChatBot = {
         if (existingButton.length) {
             existingButton.remove();
         }
+        var existingClearButton = messageElement.find('.chat-inline-clear-btn');
+        if (existingClearButton.length) {
+            existingClearButton.remove();
+        }
 
         messageElement.addClass('chat-message-bot-editable');
         var inlineEditBtn = this.jq('<button type="button" class="chat-inline-edit-btn" title="עריכה במסך גדול" aria-label="עריכה במסך גדול">✎</button>');
@@ -275,26 +416,99 @@ var EnterpriseChatBot = {
                 button.blur();
             }
         });
+        var inlineClearBtn = this.jq('<button type="button" class="chat-inline-clear-btn" title="נקה תשובה" aria-label="נקה תשובה">✕</button>');
+        inlineClearBtn.on('click', function () {
+            var button = this;
+            self.setBotMessageText(messageElement, "");
+            if (self.lastEditableResultMessage && self.lastEditableResultMessage.is(messageElement)) {
+                self.syncLatestResultEditorToResultsTextBox();
+                self.updateGlobalActionsState();
+                self.updateResendQuestionAvailability();
+            }
+            self.markActionButton(inlineClearBtn, "✓", "!", true);
+            if (button && button.blur) {
+                button.blur();
+            }
+        });
         messageElement.append(inlineEditBtn);
+        messageElement.append(inlineClearBtn);
     },
 
-    ensureMessageContentElement: function (messageElement) {
+    isInputLikeElement: function (element) {
+        if (!element || !element.length) {
+            return false;
+        }
+
+        return element.is('input, textarea, select');
+    },
+
+    readMessageContentElementValue: function (contentElement) {
+        if (!contentElement || !contentElement.length) {
+            return "";
+        }
+
+        return this.isInputLikeElement(contentElement) ? (contentElement.val() || "") : (contentElement.text() || "");
+    },
+
+    ensureMessageContentElement: function (messageElement, preferredType) {
         if (!messageElement || !messageElement.length) {
             return null;
         }
 
         var contentElement = messageElement.children('.chat-message-content');
+        var shouldUseTextArea = preferredType === 'textarea' ? true : (preferredType === 'span' ? false : null);
         if (!contentElement.length) {
-            contentElement = this.jq('<span class="chat-message-content"></span>');
+            if (shouldUseTextArea === true) {
+                contentElement = this.jq('<textarea id="resultsTextBox" class="chat-message-content chat-message-content-editor" rows="8"></textarea>');
+            } else {
+                contentElement = this.jq('<span class="chat-message-content"></span>');
+            }
             messageElement.prepend(contentElement);
+        } else {
+            var isTextArea = contentElement.is('textarea');
+            if (shouldUseTextArea === true && !isTextArea) {
+                var spanText = this.readMessageContentElementValue(contentElement);
+                contentElement.remove();
+                contentElement = this.jq('<textarea id="resultsTextBox" class="chat-message-content chat-message-content-editor" rows="8"></textarea>');
+                contentElement.val(spanText);
+                messageElement.prepend(contentElement);
+            } else if (shouldUseTextArea === false && isTextArea) {
+                var textAreaText = this.readMessageContentElementValue(contentElement);
+                contentElement.remove();
+                contentElement = this.jq('<span class="chat-message-content"></span>');
+                contentElement.text(textAreaText);
+                messageElement.prepend(contentElement);
+            }
         }
 
         return contentElement;
     },
 
+    markCurrentMessageAsEditableResult: function (messageElement) {
+        if (!messageElement || !messageElement.length) {
+            return;
+        }
+
+        if (this.lastEditableResultMessage && this.lastEditableResultMessage.length) {
+            if (!this.lastEditableResultMessage.is(messageElement)) {
+                this.ensureMessageContentElement(this.lastEditableResultMessage, 'span');
+                this.lastEditableResultMessage.removeClass('chat-message-result-active');
+            }
+        }
+
+        this.lastEditableResultMessage = messageElement;
+        this.lastEditableResultMessage.addClass('chat-message-result-active');
+        this.ensureMessageContentElement(this.lastEditableResultMessage, 'textarea');
+    },
+
     setBotMessageText: function (messageElement, text) {
         var contentElement = this.ensureMessageContentElement(messageElement);
         if (!contentElement) {
+            return;
+        }
+
+        if (this.isInputLikeElement(contentElement)) {
+            contentElement.val(text || "");
             return;
         }
 
@@ -307,7 +521,72 @@ var EnterpriseChatBot = {
             return "";
         }
 
-        return contentElement.text() || "";
+        return this.isInputLikeElement(contentElement) ? (contentElement.val() || "") : (contentElement.text() || "");
+    },
+
+    getActiveResultText: function () {
+        if (this.lastEditableResultMessage && this.lastEditableResultMessage.length) {
+            return this.getBotMessageText(this.lastEditableResultMessage);
+        }
+
+        var resultsTextBox = this.getResultsTextBox();
+        if (!resultsTextBox.length) {
+            return "";
+        }
+
+        return resultsTextBox.val() || "";
+    },
+
+    getGlobalActionButtons: function () {
+        return this.jq(
+            '#chat-global-copy-btn,' +
+            '#chat-global-copy-opinion-btn,' +
+            '#chat-global-copy-recommendation-btn,' +
+            '#chat-global-copy-brief-btn'
+        );
+    },
+
+    updateGlobalActionsState: function () {
+        var hasActiveResult = !!(this.getActiveResultText() || "").trim();
+        this.getGlobalActionButtons().prop('disabled', !hasActiveResult).attr('aria-disabled', hasActiveResult ? 'false' : 'true');
+    },
+
+    clearActiveResultText: function () {
+        if (this.lastEditableResultMessage && this.lastEditableResultMessage.length) {
+            this.setBotMessageText(this.lastEditableResultMessage, "");
+        }
+
+        var resultsTextBox = this.getResultsTextBox();
+        if (resultsTextBox.length) {
+            resultsTextBox.val("").trigger('change').trigger('input');
+        }
+
+        var draftTextBox = this.jq('#resultsTextBoxDraft').first();
+        if (draftTextBox.length) {
+            draftTextBox.val("").trigger('change').trigger('input');
+        }
+
+        this.syncEditorTextIfOpen("");
+        this.updateGlobalActionsState();
+        this.updateResendQuestionAvailability();
+    },
+
+    pasteActiveResultToTarget: function (targetId, button) {
+        var target = this.jq('#' + targetId);
+        if (!target.length) {
+            this.markActionButton(button, "הודבק", "יעד לא נמצא", false);
+            return;
+        }
+
+        var activeText = this.getActiveResultText();
+        if (!activeText || !activeText.trim()) {
+            this.markActionButton(button, "הודבק", "אין טקסט", false);
+            return;
+        }
+
+        this.rememberPasteSnapshot(targetId, target.val());
+        target.val(activeText).trigger('change').trigger('input');
+        this.markActionButton(button, "הודבק", "שגיאה", true);
     },
 
     scrollChatToBottom: function (chatBody) {
@@ -324,78 +603,6 @@ var EnterpriseChatBot = {
         }
 
         modal.removeClass('open').attr('aria-hidden', 'true');
-    },
-
-    appendAnswerActions: function (messageElement, answerText, questionId) {
-        var self = this;
-        var jq = this.jq;
-        var actions = jq('<div class="chat-message-actions"></div>');
-        var leftActions = jq('<div class="chat-actions-left"></div>');
-        var rightActions = jq('<div class="chat-actions-right"></div>');
-
-        var copyToOpinionBtn = jq('<button type="button" class="chat-action-btn chat-action-btn-soft">העתק לחו"ד</button>');
-        var copyToRecommendationBtn = jq('<button type="button" class="chat-action-btn chat-action-btn-soft">העתק להמלצה</button>');
-        var copyToBriefBtn = jq('<button type="button" class="chat-action-btn chat-action-btn-soft">העתק לתקציר</button>');
-        var copyBtn = jq('<button type="button" class="chat-action-btn chat-action-btn-copy-icon chat-action-btn-icon" title="העתק לזיכרון" aria-label="העתק לזיכרון">⧉</button>');
-        var clearBtn = jq('<button type="button" class="chat-action-btn chat-action-btn-clear chat-action-btn-icon chat-action-btn-clear-icon" title="מחיקה" aria-label="מחיקה">🗑</button>');
-        var undoBtn = jq('<button type="button" class="chat-action-btn chat-action-btn-undo chat-action-btn-icon" title="בטל העתקה" aria-label="בטל העתקה">↶</button>');
-        clearBtn.on('click', function () {
-            self.clearChatHistory();
-        });
-        undoBtn.on('click', function () {
-            var button = this;
-            var result = self.undoLastPaste();
-            self.markActionButton(undoBtn, result.ok ? "↺" : "!", "!", result.ok);
-            if (button && button.blur) {
-                button.blur();
-            }
-        });
-
-        copyBtn.on('click', function () {
-            var button = this;
-            self.copyText(answerText, function (ok) {
-                self.markActionButton(copyBtn, ok ? "✓" : "!", "!", ok);
-                if (button && button.blur) {
-                    button.blur();
-                }
-            });
-        });
-
-        function bindPasteButton(button, targetId) {
-            button.on('click', function () {
-                var clickedButton = this;
-                var target = jq('#' + targetId);
-                if (!target.length) {
-                    self.markActionButton(button, "הודבק", "יעד לא נמצא", false);
-                    if (clickedButton && clickedButton.blur) {
-                        clickedButton.blur();
-                    }
-                    return;
-                }
-
-                self.rememberPasteSnapshot(targetId, target.val());
-                target.val(answerText).trigger('change').trigger('input');
-                self.markActionButton(button, "הודבק", "שגיאה", true);
-                if (clickedButton && clickedButton.blur) {
-                    clickedButton.blur();
-                }
-            });
-        }
-
-        bindPasteButton(copyToOpinionBtn, "recommendationSummary");
-        bindPasteButton(copyToRecommendationBtn, "recommendationConditions");
-        bindPasteButton(copyToBriefBtn, "brief");
-
-        leftActions.append(clearBtn, undoBtn, copyBtn);
-        rightActions.append(copyToOpinionBtn, copyToRecommendationBtn, copyToBriefBtn);
-        actions.append(leftActions, rightActions);
-        messageElement.after(actions);
-
-        self.ensureInlineEditButton(
-            messageElement,
-            function () { return self.getBotMessageText(messageElement); },
-            { allowCopy: true }
-        );
     },
 
     processMessage: function (text, questionId) {
@@ -423,7 +630,6 @@ var EnterpriseChatBot = {
         var self = this;
         var streamingMessageElement = null;
         var loadingRemoved = false;
-        var actionsAttached = false;
         function ensureLoadingRemoved() {
             if (loadingRemoved) {
                 return;
@@ -441,6 +647,7 @@ var EnterpriseChatBot = {
                 if (!streamingMessageElement) {
                     streamingMessageElement = self.jq('<div class="chat-message bot"></div>');
                     chatBody.append(streamingMessageElement);
+                    self.markCurrentMessageAsEditableResult(streamingMessageElement);
                     self.ensureInlineEditButton(
                         streamingMessageElement,
                         function () { return self.getBotMessageText(streamingMessageElement); },
@@ -449,6 +656,7 @@ var EnterpriseChatBot = {
                 }
                 self.setBotMessageText(streamingMessageElement, answer || "");
                 self.syncEditorTextIfOpen(answer || "");
+                self.updateGlobalActionsState();
                 self.scrollChatToBottom(chatBody);
                 return;
             }
@@ -461,14 +669,13 @@ var EnterpriseChatBot = {
                 chatBody.append(botMessageElement);
             }
 
+            self.markCurrentMessageAsEditableResult(botMessageElement);
             self.setBotMessageText(botMessageElement, answer || "");
             self.syncEditorTextIfOpen(answer || "");
             self.setEditorCopyButtonsVisible(true);
-
-            if (!actionsAttached && uiOptions.showActions !== false) {
-                self.appendAnswerActions(botMessageElement, answer, questionId);
-                actionsAttached = true;
-            }
+            self.setResultsTextBoxFromFirstAnswer(answer || "", questionId);
+            self.updateResendQuestionAvailability();
+            self.updateGlobalActionsState();
 
             self.scrollChatToBottom(chatBody);
         });
