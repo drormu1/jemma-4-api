@@ -137,24 +137,44 @@ namespace Site.Controllers
             // Build request stream mode strictly from question configuration.
             bool streamEnabled = questionConfig?.Stream ?? false;
 
-            var aiPayload = new
-            {
-                model = AiModel,
-                n = 1,
-                temperature = AiTemperature,
-                stream = streamEnabled,
-                messages = new[] {
-                                   new {
-                                            role = "system",
-                                             content = systemPrompt
-                                   },
+            object aiPayload = streamEnabled
+                ? (object)new
+                {
+                    model = AiModel,
+                    n = 1,
+                    temperature = AiTemperature,
+                    stream = true,
+                    stream_options = new { include_usage = true },
+                    messages = new[] {
+                                       new {
+                                                role = "system",
+                                                 content = systemPrompt
+                                       },
 
-                                  new  {
-                                            role = "user",
-                                             content = userPrompt
-                                    }
-                                  }
-            };
+                                      new  {
+                                                role = "user",
+                                                 content = userPrompt
+                                        }
+                                      }
+                }
+                : new
+                {
+                    model = AiModel,
+                    n = 1,
+                    temperature = AiTemperature,
+                    stream = false,
+                    messages = new[] {
+                                       new {
+                                                role = "system",
+                                                 content = systemPrompt
+                                       },
+
+                                      new  {
+                                                role = "user",
+                                                 content = userPrompt
+                                        }
+                                      }
+                };
 
             string jsonPayload = JsonConvert.SerializeObject(aiPayload, Formatting.None);
             WriteAiLog(userPrompt, jsonPayload);
@@ -245,14 +265,13 @@ namespace Site.Controllers
 
         private async Task<ChatResponse> SendToAiAsync(string chatRequestPayload)
         {
-
             var stopWatch = Stopwatch.StartNew();
             var response = await SendWithRetryAsync(AiApiUrl, chatRequestPayload);
             stopWatch.Stop();
             //TODO OPEN
             // Log.Trace($"time taken isn sec  = {stopWatch.Elapsed.TotalSeconds}");
             var responseString = await response.Content.ReadAsStringAsync();
-            WriteAiResponseLog(response.StatusCode, responseString);
+            WriteAiResponseLog(response.StatusCode, responseString, stopWatch.Elapsed);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -272,11 +291,13 @@ namespace Site.Controllers
 
         private async Task<ActionResult> StreamToClientAsync(string chatRequestPayload)
         {
+            var stopWatch = Stopwatch.StartNew();
             var response = await SendWithRetryAsync(AiApiUrl, chatRequestPayload);
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
-                WriteAiResponseLog(response.StatusCode, errorBody);
+                stopWatch.Stop();
+                WriteAiResponseLog(response.StatusCode, errorBody, stopWatch.Elapsed);
                 return Json(new ChatResponse { success = false, reply = $"AI provider API error (status: {(int)response.StatusCode})" });
             }
 
@@ -307,7 +328,8 @@ namespace Site.Controllers
                 }
             }
 
-            WriteAiResponseLog(response.StatusCode, rawBuilder.ToString());
+            stopWatch.Stop();
+            WriteAiResponseLog(response.StatusCode, rawBuilder.ToString(), stopWatch.Elapsed);
             return new EmptyResult();
         }
 
@@ -446,7 +468,7 @@ namespace Site.Controllers
             }
         }
 
-        private void WriteAiResponseLog(HttpStatusCode statusCode, string responseBody)
+        private void WriteAiResponseLog(HttpStatusCode statusCode, string responseBody, TimeSpan? elapsed = null)
         {
             try
             {
@@ -454,6 +476,10 @@ namespace Site.Controllers
                 logBuilder.AppendLine("===== AI RESPONSE =====");
                 logBuilder.AppendLine("Timestamp: " + DateTime.UtcNow.ToString("o"));
                 logBuilder.AppendLine("StatusCode: " + (int)statusCode + " (" + statusCode + ")");
+                if (elapsed.HasValue)
+                {
+                    logBuilder.AppendLine("Elapsed SEC: " + Math.Round(elapsed.Value.TotalSeconds));
+                }
 
                 var tokenUsage = ExtractTokenUsage(responseBody);
                 if (tokenUsage != null)
@@ -486,27 +512,78 @@ namespace Site.Controllers
             try
             {
                 var json = JObject.Parse(responseBody);
-                var usage = json["usage"];
-                if (usage == null)
+                var directUsage = TryExtractUsageFromJson(json);
+                if (directUsage != null)
                 {
-                    return null;
+                    return directUsage;
                 }
-
-                var promptTokens = usage.Value<int?>("prompt_tokens") ?? usage.Value<int?>("input_tokens") ?? 0;
-                var completionTokens = usage.Value<int?>("completion_tokens") ?? usage.Value<int?>("output_tokens") ?? 0;
-                var totalTokens = usage.Value<int?>("total_tokens") ?? (promptTokens + completionTokens);
-
-                return new TokenUsageInfo
-                {
-                    PromptTokens = promptTokens,
-                    CompletionTokens = completionTokens,
-                    TotalTokens = totalTokens
-                };
             }
             catch
             {
+                // Ignore and try stream-SSE usage extraction below.
+            }
+
+            return TryExtractUsageFromSseBody(responseBody);
+        }
+
+        private TokenUsageInfo TryExtractUsageFromSseBody(string responseBody)
+        {
+            var lines = responseBody.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = lines.Length - 1; i >= 0; i--)
+            {
+                var line = (lines[i] ?? string.Empty).Trim();
+                if (!line.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var data = line.Substring(5).Trim();
+                if (string.IsNullOrWhiteSpace(data) || string.Equals(data, "[DONE]", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var chunkJson = JObject.Parse(data);
+                    var chunkUsage = TryExtractUsageFromJson(chunkJson);
+                    if (chunkUsage != null)
+                    {
+                        return chunkUsage;
+                    }
+                }
+                catch
+                {
+                    // Ignore malformed/non-JSON SSE chunks.
+                }
+            }
+
+            return null;
+        }
+
+        private TokenUsageInfo TryExtractUsageFromJson(JObject json)
+        {
+            if (json == null)
+            {
                 return null;
             }
+
+            var usage = json["usage"];
+            if (usage == null)
+            {
+                return null;
+            }
+
+            var promptTokens = usage.Value<int?>("prompt_tokens") ?? usage.Value<int?>("input_tokens") ?? 0;
+            var completionTokens = usage.Value<int?>("completion_tokens") ?? usage.Value<int?>("output_tokens") ?? 0;
+            var totalTokens = usage.Value<int?>("total_tokens") ?? (promptTokens + completionTokens);
+
+            return new TokenUsageInfo
+            {
+                PromptTokens = promptTokens,
+                CompletionTokens = completionTokens,
+                TotalTokens = totalTokens
+            };
         }
 
         private class TokenUsageInfo
