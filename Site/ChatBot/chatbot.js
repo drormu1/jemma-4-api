@@ -363,7 +363,7 @@ var EnterpriseChatBot = {
     },
 
     setEditorCopyButtonsVisible: function (isVisible) {
-        var display = isVisible ? "" : "none";
+        var display = isVisible ? "inline-flex" : "none";
         this.jq('#chat-editor-copy-btn').css('display', display);
         this.jq('#chat-editor-copy-close-btn').css('display', display);
     },
